@@ -225,6 +225,7 @@
 <script>
 import debounce from 'lodash/fp/debounce'
 import uniqBy from 'lodash/fp/uniqBy'
+import trimStart from 'lodash/fp/trimCharsStart'
 import Autosize from 'vue-autosize'
 import debouncePromise from 'debounce-promise'
 import Actions from '@nextcloud/vue/dist/Components/Actions'
@@ -427,6 +428,7 @@ export default {
 	},
 	mounted() {
 		this.$refs.toLabel.$el.focus()
+
 		// event is triggered when user clicks 'new message' in navigation
 		this.$root.$on('newMessage', () => {
 			this.draftsPromise
@@ -438,6 +440,20 @@ export default {
 					this.reset()
 				})
 		})
+
+		// Add attachments in case of forward
+		if (this.forwardFrom?.attachments !== undefined) {
+			this.forwardFrom.attachments.forEach(att => {
+				const attachment = {
+					fileName: att.fileName,
+					displayName: trimStart('/')(att.fileName),
+					id: att.id,
+					messageId: this.forwardFrom.databaseId,
+					type: 'mail',
+				}
+				return this.attachments.push(attachment)
+			}, this)
+		}
 	},
 	beforeDestroy() {
 		this.$root.$off('newMessage')

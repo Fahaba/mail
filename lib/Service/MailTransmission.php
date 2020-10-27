@@ -34,6 +34,7 @@ use OCA\Mail\Account;
 use OCA\Mail\Address;
 use OCA\Mail\AddressList;
 use OCA\Mail\Contracts\IAttachmentService;
+use OCA\Mail\Contracts\IMailManager;
 use OCA\Mail\Contracts\IMailTransmission;
 use OCA\Mail\Db\Alias;
 use OCA\Mail\Db\MailboxMapper;
@@ -50,14 +51,20 @@ use OCA\Mail\IMAP\MessageMapper;
 use OCA\Mail\Model\IMessage;
 use OCA\Mail\Model\NewMessageData;
 use OCA\Mail\Model\RepliedMessageData;
+use OCA\Mail\Service\AccountService;
+use OCA\Mail\Service\Attachment\UploadedFile;
 use OCA\Mail\SMTP\SmtpClientFactory;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Files\File;
 use OCP\Files\Folder;
+use OCP\ITempManager;
 use Psr\Log\LoggerInterface;
 
 class MailTransmission implements IMailTransmission {
+
+	/** @var AccountService */
+	private $accountService;
 
 	/** @var Folder */
 	private $userFolder;
@@ -65,8 +72,14 @@ class MailTransmission implements IMailTransmission {
 	/** @var IAttachmentService */
 	private $attachmentService;
 
+	/** @var IMailManager */
+	private $mailManager;
+
 	/** @var IMAPClientFactory */
 	private $imapClientFactory;
+
+	/** @var ITempManager */
+	private $tempManager;
 
 	/** @var SmtpClientFactory */
 	private $smtpClientFactory;
@@ -87,16 +100,22 @@ class MailTransmission implements IMailTransmission {
 	 * @param Folder $userFolder
 	 */
 	public function __construct($userFolder,
+								AccountService $accountService,
 								IAttachmentService $attachmentService,
+								IMailManager $mailManager,
 								IMAPClientFactory $imapClientFactory,
+								ITempManager $tempManager,
 								SmtpClientFactory $smtpClientFactory,
 								IEventDispatcher $eventDispatcher,
 								MailboxMapper $mailboxMapper,
 								MessageMapper $messageMapper,
 								LoggerInterface $logger) {
+		$this->accountService = $accountService;
 		$this->userFolder = $userFolder;
 		$this->attachmentService = $attachmentService;
+		$this->mailManager = $mailManager;
 		$this->imapClientFactory = $imapClientFactory;
+		$this->tempManager = $tempManager;
 		$this->smtpClientFactory = $smtpClientFactory;
 		$this->eventDispatcher = $eventDispatcher;
 		$this->mailboxMapper = $mailboxMapper;
@@ -288,9 +307,14 @@ class MailTransmission implements IMailTransmission {
 	 */
 	private function handleAttachments(string $userId, NewMessageData $messageData, IMessage $message): void {
 		foreach ($messageData->getAttachments() as $attachment) {
-			if (isset($attachment['isLocal']) && $attachment['isLocal']) {
+			if (isset($attachment['type']) && $attachment['type'] === 'local') {
+				// Adds an uploaded attachment
 				$this->handleLocalAttachment($userId, $attachment, $message);
+			} elseif (isset($attachment['type']) && $attachment['type'] === 'mail') {
+				// Adds an attachment from another email (use case is, eg., a mail forward)
+				$this->handleEmailAttachment($userId, $attachment, $message);
 			} else {
+				// Adds an attachment from Files
 				$this->handleCloudAttachment($attachment, $message);
 			}
 		}
@@ -319,6 +343,39 @@ class MailTransmission implements IMailTransmission {
 			// TODO: rethrow?
 			return null;
 		}
+	}
+
+	/**
+	 * @param string $userId
+	 * @param array $attachment
+	 * @param IMessage $message
+	 *
+	 * @return int|null
+	 *
+	 * Adds an attachment that's coming from another message's attachment (typical use case: email forwarding)
+	 *
+	 */
+	private function handleEmailAttachment(string $userId, array $attachment, IMessage $message) {
+
+		// Get attachment
+		$attachmentMessage = $this->mailManager->getMessage($userId, (int)$attachment['messageId']);
+		$mailbox = $this->mailManager->getMailbox($userId, $attachmentMessage->getMailboxId());
+		$account = $this->accountService->find($userId, $mailbox->getAccountId());
+		$folder = $account->getMailbox($mailbox->getName());
+		$att = $folder->getAttachment($attachmentMessage->getUid(), $attachment['id']);
+
+		// Create temporary file from attachment
+		$tmpPath = $this->tempManager->getTemporaryFile();
+		file_put_contents($tmpPath, $att->getContents());
+		$tmpFile['name'] = $att->getName();
+		$tmpFile['tmp_name'] = $tmpPath;
+		$tmpFile['type'] = $att->getType();
+
+		// Attach temporary file to new messsage
+		$uploadedFile = new UploadedFile($tmpFile);
+		$localAttachment = $this->attachmentService->addFile($userId, $uploadedFile);
+		list($localAttachment, $file) = $this->attachmentService->getAttachment($userId, $localAttachment->getId());
+		$message->addLocalAttachment($localAttachment, $file);
 	}
 
 	/**

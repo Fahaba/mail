@@ -98,7 +98,7 @@ export default {
 				fileName: name,
 				displayName: trimStart('/')(name),
 				id,
-				isLocal: id !== undefined,
+				type: id !== undefined ? 'local' : 'cloud',
 			}
 		},
 		emitNewAttachment(attachment) {
