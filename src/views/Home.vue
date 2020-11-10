@@ -1,5 +1,9 @@
 <template>
 	<Content v-shortkey.once="['c']" app-name="mail" @shortkey.native="onNewMessage">
+		<div v-if="isMobile"
+			class="toggle icon-confirm"
+			href="#"
+			@click="$emit('close')" />
 		<Navigation />
 		<MailboxThread v-if="activeAccount" :account="activeAccount" :mailbox="activeMailbox" />
 	</Content>
@@ -106,5 +110,27 @@ export default {
 	flex-direction: column;
 	flex: 1 1 100%;
 	min-width: 0;
+}
+.toggle {
+	position: fixed;
+	width: 44px;
+	height: 44px;
+	padding: 14px;
+	cursor: pointer;
+	opacity: .6;
+	font-size: 16px;
+	line-height: 17px;
+	transform: rotate(180deg);
+	background-color: var(--color-main-background);
+	z-index: 2000;
+	&:active,
+	&:hover,
+	&:focus {
+		opacity: 1;
+	}
+	// Hide app-navigation toggle if shown
+	&::v-deep + .app-navigation .app-navigation-toggle {
+		display: none;
+	}
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-	<AppContentDetails id="mail-message">
+	<div id="mail-message">
 		<Loading v-if="loading" />
 		<template v-else>
 			<div id="mail-thread-header">
@@ -24,11 +24,10 @@
 				@move="onMove(env.databaseId)"
 				@toggleExpand="toggleExpand(env.databaseId)" />
 		</template>
-	</AppContentDetails>
+	</div>
 </template>
 
 <script>
-import AppContentDetails from '@nextcloud/vue/dist/Components/AppContentDetails'
 import { prop, uniqBy } from 'ramda'
 
 import { getRandomMessageErrorMessage } from '../util/ErrorMessageFactory'
@@ -41,7 +40,6 @@ export default {
 	name: 'Thread',
 	components: {
 		RecipientBubble,
-		AppContentDetails,
 		Loading,
 		ThreadEnvelope,
 	},
