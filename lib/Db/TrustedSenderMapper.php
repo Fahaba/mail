@@ -53,8 +53,10 @@ class TrustedSenderMapper extends QBMapper {
 		$qb = $this->db->getQueryBuilder();
 
 		$insert = $qb->insert($this->getTableName())
-			->set('user_id', $qb->createNamedParameter($uid))
-			->set('email', $qb->createNamedParameter($email));
+			->values([
+				'user_id' => $qb->createNamedParameter($uid),
+				'email' => $qb->createNamedParameter($email),
+			]);
 
 		$insert->execute();
 	}
