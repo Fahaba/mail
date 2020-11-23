@@ -32,12 +32,14 @@ use OCA\Mail\Db\Mailbox;
 use OCA\Mail\Db\MailboxMapper;
 use OCA\Mail\Db\Message;
 use OCA\Mail\Events\DraftSavedEvent;
+use OCA\Mail\Events\MessageDeletedEvent;
 use OCA\Mail\Events\MessageSentEvent;
 use OCA\Mail\IMAP\IMAPClientFactory;
 use OCA\Mail\IMAP\MailboxSync;
 use OCA\Mail\IMAP\MessageMapper;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\EventDispatcher\Event;
+use OCP\EventDispatcher\IEventDispatcher;
 use OCP\EventDispatcher\IEventListener;
 use Psr\Log\LoggerInterface;
 
@@ -58,6 +60,9 @@ class DeleteDraftListener implements IEventListener {
 	/** @var LoggerInterface */
 	private $logger;
 
+	/** @var IEventDispatcher */
+	private $eventDispatcher;
+
 	public function __construct(IMAPClientFactory $imapClientFactory,
 								MailboxMapper $mailboxMapper,
 								MessageMapper $messageMapper,
@@ -68,6 +73,7 @@ class DeleteDraftListener implements IEventListener {
 		$this->messageMapper = $messageMapper;
 		$this->mailboxSync = $mailboxSync;
 		$this->logger = $logger;
+		$this->eventDispatcher = $eventDispatcher;
 	}
 
 	public function handle(Event $event): void {
@@ -106,6 +112,10 @@ class DeleteDraftListener implements IEventListener {
 				'exception' => $e,
 			]);
 		}
+
+		$this->eventDispatcher->dispatchTyped(
+			new MessageDeletedEvent($account, $draftsMailbox, $draft->getUid())
+		);
 	}
 
 	private function getDraftsMailbox(Account $account): Mailbox {
