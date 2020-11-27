@@ -43,6 +43,7 @@ use Horde_Mime_Part;
 use JsonSerializable;
 use OC;
 use OCA\Mail\AddressList;
+use OCA\Mail\Attachment;
 use OCA\Mail\Db\LocalAttachment;
 use OCA\Mail\Service\Html;
 use OCP\AppFramework\Db\DoesNotExistException;
@@ -600,6 +601,15 @@ class IMAPMessage implements IMessage, JsonSerializable {
 	 */
 	public function getLocalAttachments(): array {
 		throw new Exception('not implemented');
+	}
+
+	/**
+	 * @param Attachment $attachment
+	 *
+	 * @return void
+	 */
+	public function addAttachmentFromAttachment(Attachment $attachment) {
+		throw new Exception('IMAP message is immutable');
 	}
 
 	/**

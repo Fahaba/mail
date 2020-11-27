@@ -25,6 +25,7 @@ namespace OCA\Mail\Model;
 
 use Horde_Mime_Part;
 use OCA\Mail\AddressList;
+use OCA\Mail\Attachment;
 use OCA\Mail\Db\LocalAttachment;
 use OCP\Files\File;
 use OCP\Files\SimpleFS\ISimpleFile;
@@ -220,6 +221,25 @@ class Message implements IMessage {
 	 */
 	public function getLocalAttachments(): array {
 		return $this->localAttachments;
+	}
+
+	/**
+	 * @param Attachment $attachment
+	 *
+	 * @return void
+	 *
+	 * Adds a file that's coming from another email's attachment (typical
+	 * use case is forwarding a message)
+	 * 
+	 */
+	public function addAttachmentFromAttachment(Attachment $attachment) {
+		$part = new Horde_Mime_Part();
+		$part->setCharset('us-ascii');
+		$part->setDisposition('attachment');
+		$part->setName($attachment->getName());
+		$part->setContents($attachment->getContents());
+		$part->setType($attachment->getType());
+		$this->cloudAttachments[] = $part;
 	}
 
 	/**

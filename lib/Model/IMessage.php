@@ -25,6 +25,7 @@ namespace OCA\Mail\Model;
 
 use Horde_Mime_Part;
 use OCA\Mail\AddressList;
+use OCA\Mail\Attachment;
 use OCA\Mail\Db\LocalAttachment;
 use OCP\Files\File;
 use OCP\Files\SimpleFS\ISimpleFile;
@@ -129,6 +130,11 @@ interface IMessage {
 	 * @return Horde_Mime_Part[]
 	 */
 	public function getLocalAttachments(): array;
+
+	/**
+	 * @param Attachmente $attachment
+	 */
+	public function addAttachmentFromAttachment(Attachment $attachment);
 
 	/**
 	 * @param File $fileName

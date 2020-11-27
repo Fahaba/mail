@@ -350,32 +350,22 @@ class MailTransmission implements IMailTransmission {
 	 * @param array $attachment
 	 * @param IMessage $message
 	 *
-	 * @return int|null
+	 * @return void
 	 *
 	 * Adds an attachment that's coming from another message's attachment (typical use case: email forwarding)
 	 *
 	 */
 	private function handleEmailAttachment(string $userId, array $attachment, IMessage $message) {
 
-		// Get attachment
+		// Gets attachment from other message
 		$attachmentMessage = $this->mailManager->getMessage($userId, (int)$attachment['messageId']);
 		$mailbox = $this->mailManager->getMailbox($userId, $attachmentMessage->getMailboxId());
 		$account = $this->accountService->find($userId, $mailbox->getAccountId());
 		$folder = $account->getMailbox($mailbox->getName());
-		$att = $folder->getAttachment($attachmentMessage->getUid(), $attachment['id']);
+		$attachment = $folder->getAttachment($attachmentMessage->getUid(), $attachment['id']);
 
-		// Create temporary file from attachment
-		$tmpPath = $this->tempManager->getTemporaryFile();
-		file_put_contents($tmpPath, $att->getContents());
-		$tmpFile['name'] = $att->getName();
-		$tmpFile['tmp_name'] = $tmpPath;
-		$tmpFile['type'] = $att->getType();
-
-		// Attach temporary file to new messsage
-		$uploadedFile = new UploadedFile($tmpFile);
-		$localAttachment = $this->attachmentService->addFile($userId, $uploadedFile);
-		list($localAttachment, $file) = $this->attachmentService->getAttachment($userId, $localAttachment->getId());
-		$message->addLocalAttachment($localAttachment, $file);
+		// Attaches attachment to new messsage
+		$message->addAttachmentFromAttachment($attachment);
 	}
 
 	/**
