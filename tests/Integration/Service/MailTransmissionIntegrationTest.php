@@ -103,6 +103,7 @@ class MailTransmissionIntegrationTest extends TestCase {
 		$this->transmission = new MailTransmission(
 			$userFolder,
 			$this->attachmentService,
+			OC::$server->query(IAttachmentService::class),
 			OC::$server->query(IMAPClientFactory::class),
 			OC::$server->query(SmtpClientFactory::class),
 			OC::$server->query(IEventDispatcher::class),
